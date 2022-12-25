@@ -15,7 +15,7 @@ spec:
       containers:
       - name: frontend
         # We advise you to build, push and use your own image, instead of using instructor's image.
-        image: ghcr.io/jasonsmithio/myfrontend:v1
+        image: hngiap94/nd064-c4-frontend:latest
         ports:
         - containerPort: 8080
 ---
