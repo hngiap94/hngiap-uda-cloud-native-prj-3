@@ -1,0 +1,4 @@
+# Build and push docker images
+docker login
+docker build -t hngiap94/nd064-c4-backend:v1 .
+docker push hngiap94/nd064-c4-backend:v1

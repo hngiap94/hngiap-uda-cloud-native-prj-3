@@ -5,8 +5,8 @@
 ![monitoring installation](answer-img/monitoring_installation.png)
 
 ## Setup the Jaeger and Prometheus source
+![Jaeger datasource grafana](answer-img/jaeger_datasource_grafana.png)
 ![grafana honepage](answer-img/grafana_honepage.png)
-*TODO:* setup jeager as grafana datasource and take a screenshoot
 ## Create a Basic Dashboard
 ![basic dashboard](answer-img/basic_dashboard.png)
 
@@ -25,37 +25,125 @@ SLIs:
   - Backend requests's response time: Create metrics show frontend requests's response time
   - Backend and backend request's errors: 
 ## Create a Dashboard to measure our SLIs
-*TODO:* Create a dashboard to measure the uptime of the frontend and backend services We will also want to measure to measure 40x and 50x errors. Create a dashboard that show these values over a 24 hour period and take a screenshot.
+![SLIs Dashboard](answer-img/sli_dashboard.png)
 
 ## Tracing our Flask App
-*TODO:*  We will create a Jaeger span to measure the processes on the backend. Once you fill in the span, provide a screenshot of it here. Also provide a (screenshot) sample Python file containing a trace and span code used to perform Jaeger traces on the backend service.
+![Jaeger trace backend](answer-img/jaeger_trace_backend.png)
 
+![Backend trace code 1](answer-img/backend_trace_code_1.png)
+
+![Backend trace code 2](answer-img/backend_trace_code_2.png)
 ## Jaeger in Dashboards
-*TODO:* Now that the trace is running, let's add the metric to our current Grafana dashboard. Once this is completed, provide a screenshot of it here.
+![Jaeger dashboard grafana](answer-img/jaeger_dashboard_grafana.png)
 
 ## Report Error
-*TODO:* Using the template below, write a trouble ticket for the developers, to explain the errors that you are seeing (400, 500, latency) and to let them know the file that is causing the issue also include a screenshot of the tracer span to demonstrate how we can user a tracer to locate errors easily.
-
 TROUBLE TICKET
 
-Name:
+Name: Error when getting stars from database
 
-Date:
+Date: Dec 30 2022
 
-Subject:
+Subject: Cannot connect to database
 
-Affected Area:
+Affected Area: Backend app
 
-Severity:
+Severity: High
 
-Description:
+Description: When make a call to /star endpoint of bankend application, server response with status 500 error. Error message is "failed to connect to database"
 
+Screenshot:
+![Error trace](answer-img/report_error_trace.png)
 
 ## Creating SLIs and SLOs
-*TODO:* We want to create an SLO guaranteeing that our application has a 99.95% uptime per month. Name four SLIs that you would use to measure the success of this SLO.
+SLOs:
+  - The frontend and backend application will have 99.95% uptime per month
+  - 90% of the request will take no more than 1000ms to serve per month
+  - The average CPU usage should be 60% or less per month
+  - The average Memory usage should not exceed 500Mib per month
+SLIs:
+  - Measure uptime for frontend, backend application during the month
+  - Measure the average time taken to return a request during the month
+  - Measure requests, errors per second
+  - Measure the CPU usage of all application during the month
+  - Measure the Memory usage of all application during the month
 
 ## Building KPIs for our plan
-*TODO*: Now that we have our SLIs and SLOs, create a list of 2-3 KPIs to accurately measure these metrics as well as a description of why those KPIs were chosen. We will make a dashboard for this, but first write them down here.
-
+KPIs:
+  1. Application availability/latency: 
+  - Our application should have uptime more than 95% per month. This will make sure our application is stable and our customer won't face downtime issues
+  - The average request/response time is less than 500ms. This will give our customer a better experiences when using our application
+  2. Application traffic:
+  - We should measure the number of request per second to ensure that our application is serving correctly or no one is trying to make a tone of request to our application. If the traffic is too high, this will make our application's response become slow and could down for a period of time
+  - It is important to measure number of error request per second, if the number of error is high, it could be due to a service is facing an issue, we can quickly handle this issue to bring our application back
+  3. Saturation:
+  - CPU/Memory usage is very important information to take care of. If one of them is increase too high, this will cause our application will work slow or can be down
 ## Final Dashboard
-*TODO*: Create a Dashboard containing graphs that capture all the metrics of your KPIs and adequately representing your SLIs and SLOs. Include a screenshot of the dashboard here, and write a text description of what graphs are represented in the dashboard.  
+![Final Dashboard](answer-img/final_dashboard.png)
+Description:
+  - Uptime Frontend/Uptime Backend: Measure uptime for frontend, backend application
+  - Requests per second/Requests per second: Measure requests, errors per second
+  - Average response time: Measure the average time taken to return a request
+  - CPU/Memory usage: Measure the CPU, Memory usage of all application
+
+## Installation steps
+
+1. Setup vagrant
+```
+vagrant up
+vagrant ssh
+```
+2. Install helm
+```
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+```
+3. Install Grafana and Prometheus
+```
+kubectl create namespace monitoring
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add stable https://charts.helm.sh/stable
+helm repo update
+helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --kubeconfig /etc/rancher/k3s/k3s.yaml
+```
+4. Exposing Prometheus/Grafana
+```
+kubectl port-forward -n monitoring service/prometheus-kube-prometheus-prometheus --address 0.0.0.0 9090:9090
+kubectl port-forward -n monitoring prometheus-grafana-xxx --address 0.0.0.0 3000:3000
+# account: admin/prom-operator
+```
+5. Install Jaeger v1.28
+```
+kubectl create namespace observability
+kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/v1.28.0/deploy/crds/jaegertracing.io_jaegers_crd.yaml
+kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/v1.28.0/deploy/service_account.yaml
+kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/v1.28.0/deploy/role.yaml
+kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/v1.28.0/deploy/role_binding.yaml
+kubectl create -n observability -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/v1.28.0/deploy/operator.yaml
+```
+6. Cluster-wide Jaeger
+```
+kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/v1.28.0/deploy/cluster_role.yaml
+kubectl create -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/v1.28.0/deploy/cluster_role_binding.yaml
+```
+7. Create Jaeger instance
+```
+apiVersion: jaegertracing.io/v1
+kind: Jaeger
+metadata:
+  name: simplest
+  namespace: observability
+```
+8. Exposing Jaeger
+```
+kubectl port-forward -n observability \
+    $(kubectl get pods -n observability -l=app="jaeger" -o name) --address 0.0.0.0 16686:16686
+```
+9. Deploy application
+```
+kubectl apply -f app/
+```
+10. Expose application
+```
+kubectl port-forward svc/frontend-service 8080:8080
+```
